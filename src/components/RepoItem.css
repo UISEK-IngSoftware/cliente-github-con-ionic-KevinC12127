@@ -1,3 +1,5 @@
+/* Estilos para RepoItem: miniatura y iconos de acción */
+
 .container {
   text-align: center;
   position: absolute;
@@ -21,4 +23,26 @@
 
 .container a {
   text-decoration: none;
+}
+
+/* Action icon styling */
+.repo-action-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Thumbnail image override so every item shows the Ionic image */
+.repo-thumbnail-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* Slightly larger tap area in the item option */
+ion-item-option {
+  --padding-start: 12px;
+  --padding-end: 12px;
 }
