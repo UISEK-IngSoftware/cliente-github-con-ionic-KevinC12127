@@ -1,12 +1,16 @@
 import { IonContent, IonHeader, IonList, IonPage, IonTitle, IonToolbar, useIonViewDidEnter, IonModal, IonButton, IonInput, IonItem, IonLabel, IonTextarea, IonFooter, IonAlert, IonToast } from '@ionic/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import './Tab1.css';
 import RepoItem from '../components/RepoItem';
 import { RepositoryItem } from '../interfaces/RepositoryItem';
 import { fetchRepositories, deleteRepository, updateRepository } from '../services/GithubService';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Tab1: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const modalRef = useRef<any>(null);
+  
   // Estados principales: lista, edición y mensajes (alert/toast)
   const [repos, setRepos] = useState<RepositoryItem[]>([]);
   const [editingRepo, setEditingRepo] = useState<RepositoryItem | null>(null);
@@ -17,6 +21,7 @@ const Tab1: React.FC = () => {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [repoToDelete, setRepoToDelete] = useState<RepositoryItem | null>(null);
 
+
   // Toast para notificaciones de éxito/error
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -24,8 +29,13 @@ const Tab1: React.FC = () => {
 
   // Carga repositorios desde el servicio y actualiza el estado
   const loadRepos = async () => {
-    const reposData = await fetchRepositories();
-    setRepos(reposData);
+    setLoading(true);
+    try {
+      const reposData = await fetchRepositories();
+      setRepos(reposData);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Cargar repos al entrar en la vista (lifecycle de Ionic)
@@ -50,6 +60,7 @@ const Tab1: React.FC = () => {
     if (!repoToDelete || !repoToDelete.owner) return;
 
     try {
+      setLoading(true);
       await deleteRepository(repoToDelete.owner, repoToDelete.name);
       setRepos(prev => prev.filter(r => (r.full_name || `${r.owner}/${r.name}`) !== (repoToDelete.full_name || `${repoToDelete.owner}/${repoToDelete.name}`)));
       setToastMessage(`Repositorio "${repoToDelete.name}" eliminado`);
@@ -61,6 +72,7 @@ const Tab1: React.FC = () => {
       setToastColor('danger');
       setShowToast(true);
     } finally {
+      setLoading(false);
       setRepoToDelete(null);
       setShowDeleteAlert(false);
     }
@@ -71,9 +83,11 @@ const Tab1: React.FC = () => {
     setEditingRepo(repo);
     setEditName(repo.name);
     setEditDescription(repo.description || '');
+    modalRef.current?.present();
   }; 
 
   const closeEdit = () => {
+    modalRef.current?.dismiss();
     setEditingRepo(null);
     setEditName('');
     setEditDescription('');
@@ -88,6 +102,7 @@ const Tab1: React.FC = () => {
     }
 
     try {
+      setLoading(true);
       const updated = await updateRepository(editingRepo.owner, editingRepo.name, { name: editName, description: editDescription || null });
       setRepos(prev => prev.map(r => ((r.full_name || `${r.owner}/${r.name}`) === (editingRepo.full_name || `${editingRepo.owner}/${editingRepo.name}`)) ? updated : r));
       closeEdit();
@@ -99,6 +114,8 @@ const Tab1: React.FC = () => {
       setToastMessage('Error al editar el repositorio. Revisa la consola para más detalles.');
       setToastColor('danger');
       setShowToast(true);
+    } finally {
+      setLoading(false);
     }
   }; 
 
@@ -122,12 +139,13 @@ const Tab1: React.FC = () => {
               repo={repo}
               onDelete={handleDelete}
               onEdit={openEdit}
+              disabled={loading}
             />
           ))}
         </IonList>
 
         {/* Modal de edición: permite modificar nombre y descripción sin salir de la app */}
-        <IonModal isOpen={!!editingRepo} onDidDismiss={closeEdit}>
+        <IonModal ref={modalRef} onDidDismiss={closeEdit}>
           <IonHeader>
             <IonToolbar>
               <IonTitle>Editar repositorio</IonTitle>
@@ -136,17 +154,17 @@ const Tab1: React.FC = () => {
           <IonContent>
             <IonItem>
               <IonLabel position="stacked">Nombre</IonLabel>
-              <IonInput value={editName} onIonChange={(e: CustomEvent) => setEditName((e.detail?.value) as string)} />
+              <IonInput value={editName} onIonChange={(e: CustomEvent) => setEditName((e.detail?.value) as string)} placeholder="Ingrese el nombre" />
             </IonItem>
             <IonItem>
               <IonLabel position="stacked">Descripción</IonLabel>
-              <IonTextarea value={editDescription} onIonChange={(e: CustomEvent) => setEditDescription((e.detail?.value) as string)} />
+              <IonTextarea value={editDescription} onIonChange={(e: CustomEvent) => setEditDescription((e.detail?.value) as string)} placeholder="Ingrese la descripción" />
             </IonItem>
           </IonContent>
           <IonFooter>
             <div style={{ display: 'flex', gap: 8, padding: 12 }}>
-              <IonButton color="medium" onClick={closeEdit}>Cancelar</IonButton>
-              <IonButton color="primary" onClick={saveEdit}>Guardar</IonButton>
+              <IonButton color="medium" onClick={closeEdit} disabled={loading}>Cancelar</IonButton>
+              <IonButton color="primary" onClick={saveEdit} disabled={loading}>Guardar</IonButton>
             </div>
           </IonFooter>
         </IonModal>
@@ -170,6 +188,8 @@ const Tab1: React.FC = () => {
           duration={3000}
           onDidDismiss={() => setShowToast(false)}
         />
+        <LoadingSpinner isOpen={loading} />
+
 
       </IonContent>
     </IonPage>

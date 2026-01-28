@@ -13,11 +13,13 @@ import { logoGithub } from "ionicons/icons";
 import "./Login.css";
 import { useState } from "react";
 import AuthService from "../services/AuthService";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = (event: React.FormEvent) => {
     event.preventDefault();
@@ -27,11 +29,13 @@ const Login: React.FC = () => {
       return;
     }
 
+    setLoading(true);
     const success = AuthService.login(username, token);
     if (success) {
       window.location.href = "tab1";
     } else {
-        setError("Error al iniciar sesion.");
+      setError("Error al iniciar sesion.");
+      setLoading(false);
     }
   };
 
@@ -74,7 +78,7 @@ const Login: React.FC = () => {
               </IonText>
             )}
 
-            <IonButton expand="block" type="submit">
+            <IonButton expand="block" type="submit" disabled={loading}>
               Iniciar Sesion
             </IonButton>
             <IonText color="medium" className="login-hint">
@@ -82,6 +86,7 @@ const Login: React.FC = () => {
             </IonText>
           </form>
         </div>
+        <LoadingSpinner isOpen={loading} />
       </IonContent>
     </IonPage>
   );
